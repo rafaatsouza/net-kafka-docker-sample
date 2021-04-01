@@ -6,6 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using FluentValidation.AspNetCore;
+using KafkaDockerSample.Ui.Api.Validators;
+using FluentValidation;
+using KafkaDockerSample.Ui.Api.Dtos;
 
 namespace KafkaDockerSample.Ui.Api
 {
@@ -20,6 +24,8 @@ namespace KafkaDockerSample.Ui.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddTransient<IValidator<SendMessageRequest>, SendMessageValidator>();
+
             services.AddServices();
 
             services
@@ -27,6 +33,7 @@ namespace KafkaDockerSample.Ui.Api
                 {
                     m.EnableEndpointRouting = false;
                 })
+                .AddFluentValidation()
                 .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
                 .AddJsonOptions(options =>
                 {
