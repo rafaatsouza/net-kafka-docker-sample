@@ -13,7 +13,7 @@ namespace KafkaDockerSample.Core.Domain.Exceptions
     {
         public static KafkaMessageCustomError MessageContentNullOrEmpty =>
             new KafkaMessageCustomError(HttpStatusCode.BadRequest, 
-                "The message content is null or empty");
+                nameof(MessageContentNullOrEmpty), "The message content is null or empty");
 
         public static KafkaMessageCustomError MessageNotRetrieved(string errorMessage = null)
         {
@@ -22,8 +22,8 @@ namespace KafkaDockerSample.Core.Domain.Exceptions
             if (!string.IsNullOrEmpty(errorMessage))
                 message += $"; {errorMessage}";
 
-            return new KafkaMessageCustomError(
-                HttpStatusCode.InternalServerError, message);
+            return new KafkaMessageCustomError(HttpStatusCode.InternalServerError, 
+                nameof(MessageNotRetrieved), message);
         }            
 
         public static KafkaMessageCustomError MessageNotSent(string errorMessage = null)
@@ -33,11 +33,12 @@ namespace KafkaDockerSample.Core.Domain.Exceptions
             if (!string.IsNullOrEmpty(errorMessage))
                 message += $"; {errorMessage}";
 
-            return new KafkaMessageCustomError(
-                HttpStatusCode.InternalServerError, message);
+            return new KafkaMessageCustomError(HttpStatusCode.InternalServerError,
+                nameof(MessageNotSent), message);
         }            
                         
-        protected KafkaMessageCustomError(HttpStatusCode statusCode, string error) : base(statusCode, error)
+        protected KafkaMessageCustomError(HttpStatusCode statusCode, 
+            string key, string error) : base(statusCode, key, error)
         { }
     }
 }
