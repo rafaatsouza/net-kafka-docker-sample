@@ -28,7 +28,8 @@ namespace KafkaDockerSample.Core.Application.Services
 
         public async Task<string> GetLastMessageAsync()
         {
-            var getMessageResult = await messageReceiver.GetLastMessageAsync();
+            var getMessageResult = await messageReceiver
+                .GetLastMessageAsync();
 
             if (getMessageResult == null)
                 throw new KafkaMessageCustomException(
@@ -36,10 +37,13 @@ namespace KafkaDockerSample.Core.Application.Services
             
             if (!getMessageResult.Success)
                 throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageNotRetrieved(getMessageResult.ErrorMessage));
+                    KafkaMessageCustomError.MessageNotRetrieved(
+                        getMessageResult.ErrorMessage));
 
-            logger.LogInformation("{Class} - {Method} - Message successfully retrieved: {@Result}",
-                nameof(MessageService), nameof(GetLastMessageAsync), getMessageResult);
+            logger.LogInformation("{Class} - {Method} - " +
+                "Message successfully retrieved: {@Result}",
+                nameof(MessageService), nameof(GetLastMessageAsync), 
+                getMessageResult);
 
             if (string.IsNullOrEmpty(getMessageResult.Message?.Content))
                 throw new KafkaMessageCustomException(
@@ -50,7 +54,8 @@ namespace KafkaDockerSample.Core.Application.Services
 
         public async Task SendMessageAsync(string message)
         {
-            var sendMessageResult = await messageSender.SendMessageAsync(message);
+            var sendMessageResult = await messageSender
+                .SendMessageAsync(message);
 
             if (sendMessageResult == null)
                 throw new KafkaMessageCustomException(
@@ -58,10 +63,13 @@ namespace KafkaDockerSample.Core.Application.Services
             
             if (!sendMessageResult.Success)
                 throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageNotSent(sendMessageResult.ErrorMessage));
+                    KafkaMessageCustomError.MessageNotSent(
+                        sendMessageResult.ErrorMessage));
 
-            logger.LogInformation("{Class} - {Method} - Message successfully sent: {@Result}",
-                nameof(MessageService), nameof(GetLastMessageAsync), sendMessageResult);
+            logger.LogInformation("{Class} - {Method} - " + 
+                "Message successfully sent: {@Result}",
+                nameof(MessageService), nameof(GetLastMessageAsync), 
+                sendMessageResult);
         }
     }
 }
