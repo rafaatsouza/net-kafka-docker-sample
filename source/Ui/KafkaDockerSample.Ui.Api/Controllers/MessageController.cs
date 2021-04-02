@@ -1,11 +1,8 @@
 ﻿using KafkaDockerSample.Core.Domain.Services;
 using KafkaDockerSample.Ui.Api.Dtos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace KafkaDockerSample.Ui.Api.Controllers
 {
@@ -16,12 +13,12 @@ namespace KafkaDockerSample.Ui.Api.Controllers
     [ApiController]
     public class MessageController : ControllerBase
     {
-        private readonly IMessageSenderService senderService;
+        private readonly IMessageService messageService;
 
-        public MessageController(IMessageSenderService senderService)
+        public MessageController(IMessageService messageService)
         {
-            this.senderService = senderService
-                ?? throw new ArgumentNullException(nameof(senderService));
+            this.messageService = messageService
+                ?? throw new ArgumentNullException(nameof(messageService));
         }
 
         /// <summary>
@@ -32,12 +29,9 @@ namespace KafkaDockerSample.Ui.Api.Controllers
         [ProducesResponseType(400)]
         [HttpPost(Name = "SendMessage")]
         public async Task<IActionResult> SendMessageAsync(
-            [FromBody] SendMessageRequest request)
+            [FromBody] SendMessage request)
         {
-            if (string.IsNullOrEmpty(request?.Message))
-                return StatusCode(400);
-
-            await senderService.SendMessageAsync(request.Message);
+            await messageService.SendMessageAsync(request.Message);
 
             return Ok();
         }
