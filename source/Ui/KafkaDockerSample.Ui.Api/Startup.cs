@@ -1,3 +1,7 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using KafkaDockerSample.Ui.Api.Validators;
+using KafkaDockerSample.Ui.Api.Dtos;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -6,10 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using FluentValidation.AspNetCore;
-using KafkaDockerSample.Ui.Api.Validators;
-using FluentValidation;
-using KafkaDockerSample.Ui.Api.Dtos;
 
 namespace KafkaDockerSample.Ui.Api
 {
@@ -24,7 +24,7 @@ namespace KafkaDockerSample.Ui.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddTransient<IValidator<SendMessageRequest>, SendMessageValidator>();
+            services.AddTransient<IValidator<SendMessage>, SendMessageValidator>();
 
             services.AddServices();
 

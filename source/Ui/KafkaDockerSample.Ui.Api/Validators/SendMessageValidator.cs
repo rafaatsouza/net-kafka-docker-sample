@@ -3,7 +3,7 @@ using KafkaDockerSample.Ui.Api.Dtos;
 
 namespace KafkaDockerSample.Ui.Api.Validators
 {
-    public class SendMessageValidator: AbstractValidator<SendMessageRequest> 
+    public class SendMessageValidator: AbstractValidator<SendMessage> 
     {
         public SendMessageValidator() 
         {

@@ -1,6 +1,6 @@
 namespace KafkaDockerSample.Ui.Api.Dtos
 {
-    public class SendMessageRequest
+    public class SendMessage
     {
         /// <summary>
         /// Text of the message
