@@ -6,10 +6,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
   </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\KafkaDockerSample.Core.Domain\KafkaDockerSample.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\KafkaDockerSample.Infrastructure.MessageStreamer\KafkaDockerSample.Infrastructure.MessageStreamer.csproj" />
   </ItemGroup>
 
 </Project>
