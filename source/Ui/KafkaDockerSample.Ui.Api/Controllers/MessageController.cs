@@ -29,9 +29,10 @@ namespace KafkaDockerSample.Ui.Api.Controllers
         [ProducesResponseType(400)]
         [HttpPost(Name = "SendMessage")]
         public async Task<IActionResult> SendMessageAsync(
-            [FromBody] SendMessage request)
+            [FromBody] SendMessage request, [FromQuery] int maxRetry = 3)
         {
-            await messageService.SendMessageAsync(request.Message);
+            await messageService.SendMessageAsync(
+                request.Message, maxRetry);
 
             return Ok();
         }

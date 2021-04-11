@@ -1,6 +1,6 @@
-﻿using KafkaDockerSample.Core.Domain.Receivers;
+﻿using System;
 using KafkaDockerSample.Core.Domain.Senders;
-using KafkaDockerSample.Infrastructure.MessageStreamer.Receivers;
+using KafkaDockerSample.Infrastructure.MessageStreamer;
 using KafkaDockerSample.Infrastructure.MessageStreamer.Senders;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -8,10 +8,13 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class ApplicationServiceCollectionExtensions
     {
         public static IServiceCollection AddMessageStreamer(
-            this IServiceCollection services)
+            this IServiceCollection services, MessageStreamerConfiguration configuration)
         {
-            services.AddScoped<IMessageReceiver , MessageReceiver>();
-            services.AddScoped<IMessageSender , MessageSender>();
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            services.AddSingleton(configuration);
+            services.AddScoped<IMessageSender, MessageSender>();
 
             return services;
         }

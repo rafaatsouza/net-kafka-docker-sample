@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using KafkaDockerSample.Core.Application;
 
 namespace KafkaDockerSample.Ui.Api
 {
@@ -26,7 +27,10 @@ namespace KafkaDockerSample.Ui.Api
         {
             services.AddTransient<IValidator<SendMessage>, SendMessageValidator>();
 
-            services.AddServices();
+            var applicationConfiguration = Configuration
+                .GetSection("ApplicationConfiguration").Get<ApplicationConfiguration>();
+
+            services.AddServices(applicationConfiguration);
 
             services
                 .AddMvc(m =>
