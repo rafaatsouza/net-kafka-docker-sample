@@ -1,5 +1,4 @@
 ﻿using KafkaDockerSample.Core.Domain.Exceptions;
-using KafkaDockerSample.Core.Domain.Receivers;
 using KafkaDockerSample.Core.Domain.Senders;
 using KafkaDockerSample.Core.Domain.Services;
 using Microsoft.Extensions.Logging;
@@ -12,63 +11,38 @@ namespace KafkaDockerSample.Core.Application.Services
     {
         private readonly ILogger<MessageService> logger;
         private readonly IMessageSender messageSender;
-        private readonly IMessageReceiver messageReceiver;
-
+        private readonly ApplicationConfiguration config;
+        
         public MessageService(ILogger<MessageService> logger,
-            IMessageSender messageSender,
-            IMessageReceiver messageReceiver)
+            IMessageSender messageSender, ApplicationConfiguration config)
         {
             this.logger = logger
                 ?? throw new ArgumentNullException(nameof(logger));
             this.messageSender = messageSender
                 ?? throw new ArgumentNullException(nameof(messageSender));
-            this.messageReceiver = messageReceiver
-                ?? throw new ArgumentNullException(nameof(messageReceiver));
+            this.config = config
+                ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public async Task<string> GetLastMessageAsync()
-        {
-            var getMessageResult = await messageReceiver
-                .GetLastMessageAsync();
-
-            if (getMessageResult == null)
-                throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageNotRetrieved());
-            
-            if (!getMessageResult.Success)
-                throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageNotRetrieved(
-                        getMessageResult.ErrorMessage));
-
-            logger.LogInformation("{Class} - {Method} - " +
-                "Message successfully retrieved: {@Result}",
-                nameof(MessageService), nameof(GetLastMessageAsync), 
-                getMessageResult);
-
-            if (string.IsNullOrEmpty(getMessageResult.Message?.Content))
-                throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageContentNullOrEmpty);
-
-            return getMessageResult.Message.Content;
-        }
-
-        public async Task SendMessageAsync(string message)
+        public async Task SendMessageAsync(
+            string message, int maxRetry = 0)
         {
             var sendMessageResult = await messageSender
-                .SendMessageAsync(message);
+                .SendMessageAsync(config.MessageStreamerTopic, 
+                    message, maxRetry);
 
             if (sendMessageResult == null)
-                throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageNotSent());
+                throw new MessageCustomException(
+                    MessageCustomError.MessageNotSent());
             
             if (!sendMessageResult.Success)
-                throw new KafkaMessageCustomException(
-                    KafkaMessageCustomError.MessageNotSent(
+                throw new MessageCustomException(
+                    MessageCustomError.MessageNotSent(
                         sendMessageResult.ErrorMessage));
 
             logger.LogInformation("{Class} - {Method} - " + 
                 "Message successfully sent: {@Result}",
-                nameof(MessageService), nameof(GetLastMessageAsync), 
+                nameof(MessageService), nameof(SendMessageAsync), 
                 sendMessageResult);
         }
     }

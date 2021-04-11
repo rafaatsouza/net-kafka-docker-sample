@@ -4,19 +4,13 @@ namespace KafkaDockerSample.Core.Domain.Models
     {
         public long ElapsedTime { get; }
 
-        public bool Success { get; }
+        public bool Success { get => string.IsNullOrEmpty(ErrorMessage); }
 
         public string ErrorMessage { get; } = null;
-
-        public SendMessageResult(long elapsedTime)
+        
+        public SendMessageResult(long elapsedTime, 
+            string errorMessage = null)
         {
-            Success = true;
-            ElapsedTime = elapsedTime;
-        }
-
-        public SendMessageResult(string errorMessage, long elapsedTime)
-        {
-            Success = false;
             ErrorMessage = errorMessage;
             ElapsedTime = elapsedTime;
         }
