@@ -8,6 +8,8 @@ services:
       - 2181:2181
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - netkafka
 
   kafka:
     container_name: kafka
@@ -25,6 +27,8 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: kafkazookeeper:2181
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - netkafka
 
   kafkalogseqcli:
     container_name: kafkalogseqcli
@@ -33,6 +37,8 @@ services:
       - "SEQ_LOG_TOKEN=${SEQ_LOG_TOKEN}"
     depends_on:
       - kafkalogseq
+    networks:
+      - netkafka
 
   kafkalogseq:
     container_name: kafkalogseq
@@ -42,6 +48,8 @@ services:
     ports:
       - 2000:80
       - 4000:5341
+    networks:
+      - netkafka
 
   senderapi:
     container_name: senderapi
@@ -49,11 +57,13 @@ services:
     ports:
       - 80:80 
     environment: 
-      - "Serilog__WriteTo__0__Args__ApiKey=${SEQ_LOG_TOKEN}"
-      - "ApplicationConfiguration__MessageStreamerServer=kafka:9093"
-      - "ApplicationConfiguration__MessageStreamerTopic=mytopic"
+      Serilog__WriteTo__0__Args__ApiKey: ${SEQ_LOG_TOKEN}
+      ApplicationConfiguration__MessageStreamerServer: kafka:9093
+      ApplicationConfiguration__MessageStreamerTopic: "mytopic"
     depends_on:
       - kafkalogseqcli
+    networks:
+      - netkafka
 
   consumerworker:
     container_name: consumerworker
@@ -61,9 +71,15 @@ services:
     ports:
       - 5000:80 
     environment: 
-      - "Serilog__WriteTo__0__Args__ApiKey=${SEQ_LOG_TOKEN}"
-      - "ConsumerConfiguration__KafkaServer=kafka:9093"
-      - "ConsumerConfiguration__KafkaTopic=mytopic"
+      Serilog__WriteTo__0__Args__ApiKey: ${SEQ_LOG_TOKEN}
+      ConsumerConfiguration__KafkaServer: kafka:9093
+      ConsumerConfiguration__KafkaTopic: "mytopic"
     depends_on:
       - kafkalogseqcli
       - kafka
+    networks:
+      - netkafka
+
+networks:
+  netkafka:
+    driver: bridge
