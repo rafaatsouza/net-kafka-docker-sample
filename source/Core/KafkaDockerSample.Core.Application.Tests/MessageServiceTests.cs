@@ -1,4 +1,5 @@
 using KafkaDockerSample.Core.Application.Services;
+using KafkaDockerSample.Core.Application.Tests.Util;
 using KafkaDockerSample.Core.Domain.Exceptions;
 using KafkaDockerSample.Core.Domain.Models;
 using KafkaDockerSample.Core.Domain.Senders;
