@@ -1,16 +1,26 @@
-﻿using KafkaDockerSample.Core.Application.Services;
+﻿using System;
+using KafkaDockerSample.Core.Application;
+using KafkaDockerSample.Core.Application.Services;
 using KafkaDockerSample.Core.Domain.Services;
+using KafkaDockerSample.Infrastructure.DistributedStreamer;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
     public static class ApplicationServiceCollectionExtensions
     {
         public static IServiceCollection AddServices(
-            this IServiceCollection services)
+            this IServiceCollection services, ApplicationConfiguration config)
         {
-            services.AddMessageStreamer();
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
 
-            services.AddScoped<IMessageService , MessageService>();
+            var streamerConfig = new DistributedStreamerConfiguration(
+                config.DistributedStreamerServer);
+
+            services.AddDistributedStreamer(streamerConfig);
+
+            services.AddSingleton(config);
+            services.AddScoped<IOccurrenceService, OccurrenceService>();
 
             return services;
         }
