@@ -1,12 +1,12 @@
 using System;
 
-namespace KafkaDockerSample.Infrastructure.MessageStreamer
+namespace KafkaDockerSample.Infrastructure.DistributedStreamer
 {
-    public class MessageStreamerConfiguration
+    public class DistributedStreamerConfiguration
     {
         public string Server { get; }
 
-        public MessageStreamerConfiguration(string server)
+        public DistributedStreamerConfiguration(string server)
         {
             Server = !string.IsNullOrEmpty(server) ? server
                 : throw new ArgumentException("Null or empty", nameof(Server));

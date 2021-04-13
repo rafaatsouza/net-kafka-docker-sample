@@ -2,7 +2,7 @@
 using KafkaDockerSample.Core.Application;
 using KafkaDockerSample.Core.Application.Services;
 using KafkaDockerSample.Core.Domain.Services;
-using KafkaDockerSample.Infrastructure.MessageStreamer;
+using KafkaDockerSample.Infrastructure.DistributedStreamer;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -14,13 +14,13 @@ namespace Microsoft.Extensions.DependencyInjection
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
 
-            var streamerConfig = new MessageStreamerConfiguration(
-                config.MessageStreamerServer);
+            var streamerConfig = new DistributedStreamerConfiguration(
+                config.DistributedStreamerServer);
 
-            services.AddMessageStreamer(streamerConfig);
+            services.AddDistributedStreamer(streamerConfig);
 
             services.AddSingleton(config);
-            services.AddScoped<IMessageService , MessageService>();
+            services.AddScoped<IOccurrenceService, OccurrenceService>();
 
             return services;
         }
