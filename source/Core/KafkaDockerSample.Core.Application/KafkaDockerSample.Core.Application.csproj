@@ -11,7 +11,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\KafkaDockerSample.Core.Domain\KafkaDockerSample.Core.Domain.csproj" />
-    <ProjectReference Include="..\..\Infrastructure\KafkaDockerSample.Infrastructure.MessageStreamer\KafkaDockerSample.Infrastructure.MessageStreamer.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\KafkaDockerSample.Infrastructure.DistributedStreamer\KafkaDockerSample.Infrastructure.DistributedStreamer.csproj" />
   </ItemGroup>
 
 </Project>

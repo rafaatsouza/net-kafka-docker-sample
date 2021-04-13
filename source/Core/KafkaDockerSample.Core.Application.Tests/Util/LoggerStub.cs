@@ -3,7 +3,7 @@ using Moq;
 using System;
 using System.Collections.Generic;
 
-namespace KafkaDockerSample.Core.Application.Tests
+namespace KafkaDockerSample.Core.Application.Tests.Util
 {
     public class LoggerStub<T> : ILogger<T>
     {

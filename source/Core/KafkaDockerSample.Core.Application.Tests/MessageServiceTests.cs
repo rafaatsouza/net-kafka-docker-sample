@@ -1,8 +1,8 @@
 using KafkaDockerSample.Core.Application.Services;
+using KafkaDockerSample.Core.Application.Tests.Util;
 using KafkaDockerSample.Core.Domain.Exceptions;
 using KafkaDockerSample.Core.Domain.Models;
-using KafkaDockerSample.Core.Domain.Receivers;
-using KafkaDockerSample.Core.Domain.Senders;
+using KafkaDockerSample.Core.Domain.Producers;
 using KafkaDockerSample.Core.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -13,41 +13,40 @@ using Xunit;
 
 namespace KafkaDockerSample.Core.Application.Tests
 {
-    public class MessageServiceTests
+    public class OccurrenceServiceTests
     {
-        private readonly IMessageService messageService;
+        private readonly IOccurrenceService occurrenceService;
 
-        private readonly LoggerStub<MessageService> stubLogger;
-        private readonly Mock<IMessageSender> mockMessageSender;
-        private readonly Mock<IMessageReceiver> mockMessageReceiver;
+        private readonly LoggerStub<OccurrenceService> stubLogger;
+        private readonly Mock<IOccurrenceProducer> mockOccurrenceProducer;
 
-        public MessageServiceTests()
+        private const string Topic = "mytopic";
+
+        public OccurrenceServiceTests()
         {
-            stubLogger = new LoggerStub<MessageService>();
-            mockMessageSender = new Mock<IMessageSender>();
-            mockMessageReceiver = new Mock<IMessageReceiver>();
+            stubLogger = new LoggerStub<OccurrenceService>();
+            mockOccurrenceProducer = new Mock<IOccurrenceProducer>();
 
-            messageService = new MessageService(
+            occurrenceService = new OccurrenceService(
                 stubLogger,
-                mockMessageSender.Object,
-                mockMessageReceiver.Object
+                mockOccurrenceProducer.Object,
+                new ApplicationConfiguration()
+                {
+                    DistributedStreamerTopic = Topic
+                }
             );
         }
 
         [Fact]
-        [Trait(nameof(IMessageService.GetLastMessageAsync), "Error_NullResult")]
-        public async Task GetLastMessageAsync_Error_NullResult()
+        [Trait(nameof(IOccurrenceService.RegisterOccurrenceAsync), "Error_DescriptionNull")]
+        public async Task RegisterOccurrenceAsync_Error_DescriptionNull()
         {
-            var expectedError = KafkaMessageCustomError
-                .MessageNotRetrieved();
+            var expectedError = OccurrenceCustomError
+                .OccurrenceDescriptionNullOrEmpty;
 
-            mockMessageReceiver
-                .Setup(m => m.GetLastMessageAsync())
-                .ReturnsAsync((GetMessageResult)null);
-
-            var result = await Assert.ThrowsAsync<KafkaMessageCustomException>(async () => 
+            var result = await Assert.ThrowsAsync<OccurrenceCustomException>(async () => 
             {
-                _ = await messageService.GetLastMessageAsync();
+                await occurrenceService.RegisterOccurrenceAsync(null, DateTime.Now);
             });
 
             Assert.Equal(expectedError.Key, result.Key);
@@ -55,21 +54,15 @@ namespace KafkaDockerSample.Core.Application.Tests
         }
 
         [Fact]
-        [Trait(nameof(IMessageService.GetLastMessageAsync), "Error_ResultNotSuccess")]
-        public async Task GetLastMessageAsync_Error_ResultNotSuccess()
+        [Trait(nameof(IOccurrenceService.RegisterOccurrenceAsync), "Error_DescriptionEmpty")]
+        public async Task RegisterOccurrenceAsync_Error_DescriptionEmpty()
         {
-            var expectedResult = new GetMessageResult("Test", 100);
+            var expectedError = OccurrenceCustomError
+                .OccurrenceDescriptionNullOrEmpty;
 
-            var expectedError = KafkaMessageCustomError
-                .MessageNotRetrieved(expectedResult.ErrorMessage);
-
-            mockMessageReceiver
-                .Setup(m => m.GetLastMessageAsync())
-                .ReturnsAsync(expectedResult);
-
-            var result = await Assert.ThrowsAsync<KafkaMessageCustomException>(async () => 
+            var result = await Assert.ThrowsAsync<OccurrenceCustomException>(async () => 
             {
-                _ = await messageService.GetLastMessageAsync();
+                await occurrenceService.RegisterOccurrenceAsync("", DateTime.Now);
             });
 
             Assert.Equal(expectedError.Key, result.Key);
@@ -77,102 +70,89 @@ namespace KafkaDockerSample.Core.Application.Tests
         }
 
         [Fact]
-        [Trait(nameof(IMessageService.GetLastMessageAsync), "Success")]
-        public async Task GetLastMessageAsync_Success()
+        [Trait(nameof(IOccurrenceService.RegisterOccurrenceAsync), "Error_NullResult")]
+        public async Task RegisterOccurrenceAsync_Error_NullResult()
         {
-            var expectedMessage = new Message()
+            var content = "test";
+            var maxRetry = 3;
+            var date = DateTime.Now;
+
+            var expectedError = OccurrenceCustomError
+                .OccurrenceNotRegistered();
+
+            MockRegisterOccurrence(Topic, content, date, 
+                maxRetry, (RegisterOccurrenceResult)null);
+
+            var result = await Assert.ThrowsAsync<OccurrenceCustomException>(async () => 
             {
-                Content = "Test"
-            };
+                await occurrenceService.RegisterOccurrenceAsync(
+                    content, date, maxRetry);
+            });
 
-            var expectedResult = new GetMessageResult(
-                expectedMessage, 100);
+            Assert.Equal(expectedError.Key, result.Key);
+            Assert.Empty(stubLogger.logRegisters);
+        }
 
-            mockMessageReceiver
-                .Setup(m => m.GetLastMessageAsync())
-                .ReturnsAsync(expectedResult);
+        [Fact]
+        [Trait(nameof(IOccurrenceService.RegisterOccurrenceAsync), "Error_ResultNotSuccess")]
+        public async Task RegisterOccurrenceAsync_Error_ResultNotSuccess()
+        {
+            var content = "test";
+            var maxRetry = 3;
+            var date = DateTime.Now;
 
-            var result = await messageService.GetLastMessageAsync();
+            var expectedResult = new RegisterOccurrenceResult(
+                100, Guid.NewGuid(), "Test");
 
-            Assert.Equal(expectedMessage.Content, result);
+            var expectedError = OccurrenceCustomError
+                .OccurrenceNotRegistered(expectedResult.ErrorMessage);
+
+            MockRegisterOccurrence(Topic, content, date, maxRetry, expectedResult);
+
+            var result = await Assert.ThrowsAsync<OccurrenceCustomException>(async () => 
+            {
+                await occurrenceService.RegisterOccurrenceAsync(content, date, maxRetry);
+            });
+
+            Assert.Equal(expectedError.Key, result.Key);
+            Assert.Empty(stubLogger.logRegisters);
+        }
+
+        [Fact]
+        [Trait(nameof(IOccurrenceService.RegisterOccurrenceAsync), "Success")]
+        public async Task RegisterOccurrenceAsync_Success()
+        {
+            var content = "test";
+            var maxRetry = 3;
+            var date = DateTime.Now;
+            
+            var expectedResult = new RegisterOccurrenceResult(100, Guid.NewGuid());
+
+            MockRegisterOccurrence(Topic, content, 
+                date, maxRetry, expectedResult);
+
+            await occurrenceService.RegisterOccurrenceAsync(
+                content, date, maxRetry);
+
             Assert.Single(stubLogger.logRegisters);
             Assert.Equal(LogLevel.Information, stubLogger.logRegisters.Single());
         }
 
-        [Fact]
-        [Trait(nameof(IMessageService.SendMessageAsync), "Error_NullResult")]
-        public async Task SendMessageAsync_Error_NullResult()
+        private void MockRegisterOccurrence(string topic, string content, 
+            DateTime date, int maxRetry, RegisterOccurrenceResult result)
         {
-            var content = "test";
-
-            var expectedError = KafkaMessageCustomError
-                .MessageNotSent();
-
-            mockMessageSender
-                .Setup(m => m.SendMessageAsync(It.IsAny<string>()))
-                .Callback<string>(contentCallback => 
+            mockOccurrenceProducer
+                .Setup(m => m.RegisterOccurrenceAsync(It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<int>()))
+                .Callback<string, string, DateTime, int>((topicCallback, 
+                    contentCallback, dateCallback, maxRetryCallback) => 
                 {
+                    Assert.Equal(topic, topicCallback);
                     Assert.Equal(content, contentCallback);
+                    Assert.Equal(date, dateCallback);
+                    Assert.Equal(maxRetry, maxRetryCallback);
                 })
-                .ReturnsAsync((SendMessageResult)null);
-
-            var result = await Assert.ThrowsAsync<KafkaMessageCustomException>(async () => 
-            {
-                await messageService.SendMessageAsync(content);
-            });
-
-            Assert.Equal(expectedError.Key, result.Key);
-            Assert.Empty(stubLogger.logRegisters);
-        }
-
-        [Fact]
-        [Trait(nameof(IMessageService.SendMessageAsync), "Error_ResultNotSuccess")]
-        public async Task SendMessageAsync_Error_ResultNotSuccess()
-        {
-            var content = "test";
-            
-            var expectedResult = new SendMessageResult("Test", 100);
-
-            var expectedError = KafkaMessageCustomError
-                .MessageNotSent(expectedResult.ErrorMessage);
-
-            mockMessageSender
-                .Setup(m => m.SendMessageAsync(It.IsAny<string>()))
-                .Callback<string>(contentCallback => 
-                {
-                    Assert.Equal(content, contentCallback);
-                })
-                .ReturnsAsync(expectedResult);
-
-            var result = await Assert.ThrowsAsync<KafkaMessageCustomException>(async () => 
-            {
-                await messageService.SendMessageAsync(content);
-            });
-
-            Assert.Equal(expectedError.Key, result.Key);
-            Assert.Empty(stubLogger.logRegisters);
-        }
-
-        [Fact]
-        [Trait(nameof(IMessageService.SendMessageAsync), "Success")]
-        public async Task SendMessageAsync_Success()
-        {
-            var content = "test";
-            
-            var expectedResult = new SendMessageResult(100);
-
-            mockMessageSender
-                .Setup(m => m.SendMessageAsync(It.IsAny<string>()))
-                .Callback<string>(contentCallback => 
-                {
-                    Assert.Equal(content, contentCallback);
-                })
-                .ReturnsAsync(expectedResult);
-            
-            await messageService.SendMessageAsync(content);
-
-            Assert.Single(stubLogger.logRegisters);
-            Assert.Equal(LogLevel.Information, stubLogger.logRegisters.Single());
+                .ReturnsAsync(result);
         }
     }
 }
