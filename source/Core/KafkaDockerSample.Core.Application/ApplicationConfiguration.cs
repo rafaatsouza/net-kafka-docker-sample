@@ -2,8 +2,8 @@ namespace KafkaDockerSample.Core.Application
 {
     public class ApplicationConfiguration
     {
-        public string MessageStreamerTopic { get; set; }
+        public string DistributedStreamerTopic { get; set; }
 
-        public string MessageStreamerServer { get; set; }
+        public string DistributedStreamerServer { get; set; }
     }
 }

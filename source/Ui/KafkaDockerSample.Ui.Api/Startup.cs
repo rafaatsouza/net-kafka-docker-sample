@@ -25,7 +25,7 @@ namespace KafkaDockerSample.Ui.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddTransient<IValidator<SendMessage>, SendMessageValidator>();
+            services.AddTransient<IValidator<RegisterOccurrence>, RegisterOccurrenceValidator>();
 
             var applicationConfiguration = Configuration
                 .GetSection("ApplicationConfiguration").Get<ApplicationConfiguration>();

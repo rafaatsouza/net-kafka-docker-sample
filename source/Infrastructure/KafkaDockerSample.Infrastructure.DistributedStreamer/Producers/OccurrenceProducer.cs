@@ -1,44 +1,48 @@
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using KafkaDockerSample.Core.Domain.Models;
-using KafkaDockerSample.Infrastructure.MessageStreamer.Exceptions;
+using KafkaDockerSample.Core.Domain.Producers;
+using KafkaDockerSample.Infrastructure.DistributedStreamer.Exceptions;
+using KafkaDockerSample.Infrastructure.DistributedStreamer.Serializers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace KafkaDockerSample.Infrastructure.MessageStreamer.Senders.Base
+namespace KafkaDockerSample.Infrastructure.DistributedStreamer.Producers
 {
-    public abstract class KafkaStreamManager<TKey, TValue>
+    public class OccurrenceProducer : IOccurrenceProducer
     {
-        private readonly ILogger logger;
+        private readonly ILogger<OccurrenceProducer> logger;
         private readonly ProducerConfig producerConfig;
         private readonly AdminClientConfig adminClientConfig;
 
-        public KafkaStreamManager(ILogger logger, string server)
+        public OccurrenceProducer(ILogger<OccurrenceProducer> logger, 
+            DistributedStreamerConfiguration config)
         {
             this.logger = logger 
                 ?? throw new ArgumentNullException(nameof(logger));
                 
-            if (string.IsNullOrEmpty(server))
-                throw new ArgumentNullException(server);
+            if (string.IsNullOrEmpty(config?.Server))
+                throw new ArgumentNullException(nameof(config.Server));
 
             producerConfig = new ProducerConfig() 
             { 
-                BootstrapServers = server
+                BootstrapServers = config.Server
             };
 
             adminClientConfig = new AdminClientConfig() 
             { 
-                BootstrapServers = server
+                BootstrapServers = config.Server
             };
         }
 
-        protected async Task<SendMessageResult> SendMessageWithRetryAsync(
-            string topic, TKey key, TValue value, int maxRetry = 0)
+        public async Task<RegisterOccurrenceResult> RegisterOccurrenceAsync(
+            string topic, string description, DateTime date, int maxRetry = 0)
         {
             await CreatesTopicAsync(topic);
-            
+
+            var occurrence = new Occurrence(description, date);
             var errorMessage = (string)null;
             var timer = new Stopwatch();
 
@@ -46,10 +50,10 @@ namespace KafkaDockerSample.Infrastructure.MessageStreamer.Senders.Base
 
             try
             {
-                _ = await ProduceMessageAsync(
-                    topic, key, value, maxRetry);
+                var result = await RegisterOccurrenceWithRetryAsync(
+                    topic, occurrence, maxRetry);
             }
-            catch (MessageSenderCustomException ex)
+            catch (Exception ex)
             {
                 errorMessage = ex.Message;
             }
@@ -58,24 +62,25 @@ namespace KafkaDockerSample.Infrastructure.MessageStreamer.Senders.Base
                 timer.Stop();
             }
 
-            return new SendMessageResult(
-                timer.ElapsedMilliseconds, errorMessage);
+            return new RegisterOccurrenceResult(
+                timer.ElapsedMilliseconds, occurrence.Id, errorMessage);
         }
 
-        private async Task<DeliveryResult<TKey, TValue>> ProduceMessageAsync(
-            string topic, TKey key, TValue value, int maxRetry)
+        private async Task<DeliveryResult<String, Occurrence>> RegisterOccurrenceWithRetryAsync(
+            string topic, Occurrence occurrence, int maxRetry = 0)
         {
-            var kafkaMessage = new Message<TKey, TValue> 
+            var kafkaMessage = new Message<String, Occurrence> 
             { 
-                Key = key,
-                Value = value 
+                Key = occurrence.Id.ToString(),
+                Value = occurrence
             };
 
             var attemptCount = 0;
 
             while (attemptCount == 0 || attemptCount < maxRetry)
             {
-                var producerBuild = new ProducerBuilder<TKey, TValue>(producerConfig);
+                var producerBuild = new ProducerBuilder<String, Occurrence>(producerConfig)
+                    .SetValueSerializer(new OccurrenceSerializer());
 
                 using (var producer = producerBuild.Build())
                 {
@@ -86,7 +91,7 @@ namespace KafkaDockerSample.Infrastructure.MessageStreamer.Senders.Base
 
                         if (deliveryResult.Status == PersistenceStatus.NotPersisted)
                         {
-                            logger.LogWarning("Message not set: {@deliveryResult}", 
+                            logger.LogWarning("Occurrence not registered: {@deliveryResult}", 
                                 deliveryResult);
 
                             attemptCount++;
@@ -96,18 +101,18 @@ namespace KafkaDockerSample.Infrastructure.MessageStreamer.Senders.Base
                             return deliveryResult;
                         }
                     }
-                    catch (ProduceException<TKey, TValue> ex)
+                    catch (ProduceException<String, Occurrence> ex)
                     {               
-                        throw new MessageSenderCustomException(
-                            MessageSenderCustomError.KafkaError(ex.Error));
+                        throw new OccurrenceProducerCustomException(
+                            OccurrenceProducerCustomError.KafkaError(ex.Error));
                     }
                 }
             }
 
-            throw new MessageSenderCustomException(
-                MessageSenderCustomError.MaxAttemptsExceeded);
+            throw new OccurrenceProducerCustomException(
+                OccurrenceProducerCustomError.MaxAttemptsExceeded);
         }
-    
+
         private async Task CreatesTopicAsync(string topic)
         {
             var topicSpecifications = new TopicSpecification[] 
