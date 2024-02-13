@@ -29,15 +29,18 @@ services:
     networks:
       - netkafka
 
-  kafkalogseqcli:
-    container_name: kafkalogseqcli
-    build: ./Infrastructure/KafkaDockerSample.Infrastructure.Log/.
-    environment: 
+  logseqconfig:
+    image: curlimages/curl:7.78.0
+    command: >
+      /bin/sh -c "
+      sleep 10;
+      until curl -fs logseq > /dev/null; do sleep 2; done;
+      echo 'logseq is up';
+      curl -X POST -H 'Content-Type: application/json' -d '{\"title\":\"mongo-docker-api\", \"token\":\"${SEQ_LOG_TOKEN}\"}' logseq/api/apikeys/;"
+    environment:
       - "SEQ_LOG_TOKEN=${SEQ_LOG_TOKEN}"
     depends_on:
-      - kafkalogseq
-    networks:
-      - netkafka
+      - logseq
 
   kafkalogseq:
     container_name: kafkalogseq
@@ -60,7 +63,7 @@ services:
       ApplicationConfiguration__DistributedStreamerServer: kafka:9093
       ApplicationConfiguration__DistributedStreamerTopic: "events"
     depends_on:
-      - kafkalogseqcli
+      - kafka
     networks:
       - netkafka
 
@@ -68,13 +71,12 @@ services:
     container_name: consumerworker
     build: ./Ui/KafkaDockerSample.Ui.WorkerConsumer/.
     ports:
-      - 5000:80 
+      - 5002:80
     environment: 
       Serilog__WriteTo__0__Args__ApiKey: ${SEQ_LOG_TOKEN}
       ConsumerConfiguration__KafkaServer: kafka:9093
       ConsumerConfiguration__KafkaTopic: "events"
     depends_on:
-      - kafkalogseqcli
       - kafka
     networks:
       - netkafka
